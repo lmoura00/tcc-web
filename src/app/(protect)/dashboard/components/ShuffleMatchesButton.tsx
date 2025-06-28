@@ -4,8 +4,17 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Shuffle } from "lucide-react";
 
-export function ShuffleMatchesButton({ action }: { action: (prevState: any, formData: FormData) => Promise<any> }) {
-  const [state, formAction] = useActionState(action, {
+type ShuffleState = {
+  error: string | null;
+  success: string | null;
+};
+
+export function ShuffleMatchesButton({
+  action,
+}: {
+  action: (prevState: ShuffleState, formData: FormData) => Promise<ShuffleState>;
+}) {
+  const [state, formAction] = useActionState<ShuffleState, FormData>(action, {
     error: null,
     success: null,
   });

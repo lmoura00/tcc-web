@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { FiPlus, FiCalendar, FiUsers, FiSearch } from "react-icons/fi";
 import { TeamStatusDropdown } from "../components/TeamStatusDropdown";
+import { Team } from "@/types";
+import Link from "next/link";
 
 export default async function CompeticoesPage({ searchParams }: { searchParams?: { termo?: string; status?: string } }) {
   const supabase = createClient();
@@ -53,7 +55,7 @@ export default async function CompeticoesPage({ searchParams }: { searchParams?:
     const statusCompeticao = inscricoesAbertas(competicao.periodo_inscricao_inicio, competicao.periodo_inscricao_fim)
       ? "aberta"
       : "encerrada";
-    const equipesFiltradas = (competicao.equipes || []).filter((equipe: any) => {
+    const equipesFiltradas = (competicao.equipes || []).filter((equipe: Team) => {
       const nomeEquipe = (equipe.nome || "").toLowerCase();
       return (
         !termoBusca ||
@@ -67,7 +69,7 @@ export default async function CompeticoesPage({ searchParams }: { searchParams?:
     );
   }).map((competicao) => ({
     ...competicao,
-    equipes: (competicao.equipes || []).filter((equipe: any) => {
+    equipes: (competicao.equipes || []).filter((equipe: Team) => {
       const nomeEquipe = (equipe.nome || "").toLowerCase();
       const nomeCompeticao = (competicao.nome || "").toLowerCase();
       return (
@@ -81,7 +83,7 @@ export default async function CompeticoesPage({ searchParams }: { searchParams?:
   const totalCompeticoes = competicoesFiltradas.length;
   let totalJogadoresInscritos = 0;
   competicoesFiltradas.forEach((competicao) => {
-    competicao.equipes?.forEach((equipe: any) => {
+    competicao.equipes?.forEach((equipe: Team) => {
       const playerCount = equipe.jogadores?.[0]?.count || 0;
       totalJogadoresInscritos += playerCount;
     });
@@ -94,12 +96,12 @@ export default async function CompeticoesPage({ searchParams }: { searchParams?:
           <div>
             <h1 className="text-2xl font-semibold text-gray-700">Todas as Competições</h1>
           </div>
-          <a
+          <Link
             href="/dashboard/competicoes/nova"
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             <FiPlus className="mr-2" /> Nova Competição
-          </a>
+          </Link>
         </div>
 
         <form method="get" className="mb-8 flex flex-col md:flex-row gap-4 items-center">
@@ -160,7 +162,7 @@ export default async function CompeticoesPage({ searchParams }: { searchParams?:
               competicao.periodo_inscricao_fim
             );
             let jogadoresNestaCompeticao = 0;
-            competicao.equipes?.forEach((equipe: any) => {
+            competicao.equipes?.forEach((equipe: Team) => {
               const playerCount = equipe.jogadores?.[0]?.count || 0;
               jogadoresNestaCompeticao += playerCount;
             });
@@ -197,7 +199,7 @@ export default async function CompeticoesPage({ searchParams }: { searchParams?:
                   </h4>
                   {competicao.equipes?.length > 0 ? (
                     <div className="space-y-3">
-                      {competicao.equipes.map((equipe: any) => {
+                      {competicao.equipes.map((equipe: Team) => {
                         const teamPlayerCount = equipe.jogadores?.[0]?.count || 0;
                         return (
                           <div key={equipe.id} className="flex justify-between items-center p-3 border rounded-lg">

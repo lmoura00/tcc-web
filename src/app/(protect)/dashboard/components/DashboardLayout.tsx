@@ -6,10 +6,11 @@ import SignOutButton from "./SignOutButton";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import {Profile as user} from "@/types"
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  user: any;
+  user: user;
 }
 
 interface Profile {

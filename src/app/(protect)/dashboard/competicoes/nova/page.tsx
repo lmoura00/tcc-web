@@ -57,13 +57,8 @@ export default async function NovaCompeticaoPage() {
 
   // Lista de modalidades disponíveis
   const modalidadesDisponiveis = [
-    "Futsal",
-    "Vôlei",
-    "Basquete",
-    "Handebol",
-    "Xadrez",
-    "Tênis de Mesa",
-    "Atletismo"
+    "Futsal Masculino",
+    "Futsal Feminino",
   ]
 
   return (
