@@ -15,7 +15,17 @@ interface MatchResult {
   homeScore: number;
   awayScore: number;
 }
-
+interface Team {
+  id: string;
+  nome: string;
+  modalidade: string;
+  responsavel_nome: string;
+  responsavel_email: string;
+  responsavel_turma: string;
+  created_at: string; 
+  status: string;
+  competicao_id: string;
+}
 export async function deleteCompetition(competitionId: string) {
   const supabase = createClient();
   const { error } = await (await supabase)
@@ -70,7 +80,7 @@ export async function shuffleMatches(competitionId: string): Promise<ActionResul
     const matchesPerDay = Math.max(1, Math.floor(teams.length / 2));
 
     const matches = [];
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
 
     for (let i = 0; i < teams.length; i++) {
       for (let j = i + 1; j < teams.length; j++) {
@@ -110,7 +120,7 @@ export async function shuffleMatches(competitionId: string): Promise<ActionResul
     return { error: "Ocorreu um erro ao sortear as partidas" };
   }
 
-  // O redirect deve estar FORA do try/catch!
+  
   redirect(`/dashboard/competicoes/${competitionId}/partidas`);
 }
 
@@ -138,14 +148,17 @@ export async function updateMatchResult(matchId: string, result: MatchResult) {
 async function updateStandings(competitionId: string) {
   const supabase = createClient();
   
-  const { data: matches } = await (await supabase)
+  const { error } = await (await supabase)
     .from("partidas")
     .select("*")
     .eq("competicao_id", competitionId)
     .eq("status", "concluida");
+  if (!error) {
+    console.log("Classificação atualizada com sucesso");
+  }
 }
 
-async function notifyTeamsAboutMatches(competitionId: string, teams: any[]) {
+async function notifyTeamsAboutMatches(competitionId: string, teams: Team[]) {
   try {
     const supabase = createClient();
     const { data: competition } = await (await supabase)

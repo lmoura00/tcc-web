@@ -9,7 +9,6 @@ import {
   CalendarX,
   Users,
   Shuffle,
-  MoreVertical,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -30,7 +29,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { createClient } from "@/lib/supabase/server";
-import { deleteCompetition, shuffleMatches, updateTeamStatus } from "../action";
+import { deleteCompetition, shuffleMatches } from "../action";
 import { TeamStatusDropdown } from "../../components/TeamStatusDropdown";
 import { ShuffleMatchesButton } from "../../components/ShuffleMatchesButton";
 

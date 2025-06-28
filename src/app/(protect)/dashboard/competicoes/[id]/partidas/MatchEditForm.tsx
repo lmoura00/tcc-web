@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { updateMatchDateAndLocal } from "./action";
 
-export function MatchEditForm({ partida }: { partida: any }) {
+export function MatchEditForm({ partida }: { partida: { id: string; data: string | null; local: string | null } }) {
   const [editing, setEditing] = useState(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
