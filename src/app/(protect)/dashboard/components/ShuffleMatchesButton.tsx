@@ -12,7 +12,7 @@ type ShuffleState = {
 export function ShuffleMatchesButton({
   action,
 }: {
-  action: (prevState: ShuffleState, formData: FormData) => Promise<ShuffleState>;
+  action: () => Promise<ShuffleState>;
 }) {
   const [state, formAction] = useActionState<ShuffleState, FormData>(action, {
     error: null,
