@@ -1,5 +1,5 @@
 export interface Team {
-  jogadores: any;
+  jogadores: Jogador[];
   id: string;
   nome: string;
   modalidade: string;
