@@ -60,13 +60,6 @@ export default async function EquipeDetailsPage({ params }: EquipeDetailsPagePro
 
   const equipeData: EquipeDetalhada = equipe as unknown as EquipeDetalhada;
 
-  const formatarData = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    const dateLocal = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-    return dateLocal.toLocaleDateString("pt-BR");
-  };
-
   return (
     <div className="container mx-auto p-6">
       <section className="bg-white rounded-lg shadow-md p-6">

@@ -49,7 +49,7 @@ const LoginPage = () => {
             />
           </div>
         </div>
-        {/* Jogos próximos */}
+
         <div className="w-full max-w-lg mx-auto mt-8">
           <h3 className="text-lg font-bold text-green-700 mb-2">
             Próximos Jogos

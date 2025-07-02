@@ -1,7 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { FiUsers, FiCalendar, FiMail, FiSearch } from "react-icons/fi";
 
-export default async function EquipesPage({ searchParams }: { searchParams?: { ano?: string; termo?: string } }) {
+type JogadorCount = { count: number };
+
+type EquipeFromDb = {
+  id: string;
+  nome: string;
+  modalidade: string;
+  responsavel_nome: string;
+  responsavel_email: string;
+  responsavel_turma: string;
+  created_at: string;
+  status: string;
+  jogadores: JogadorCount[];
+};
+
+type CompeticaoFromDb = {
+  id: string;
+  nome: string;
+  periodo_competicao_inicio: string;
+  periodo_competicao_fim: string;
+  equipes: EquipeFromDb[];
+};
+
+interface EquipesPageProps {
+  searchParams?: { ano?: string; termo?: string };
+}
+
+export default async function EquipesPage({ searchParams }: EquipesPageProps) {
   const supabase = createClient();
 
   const { data: competicoes, error } = await (await supabase)
@@ -45,20 +71,19 @@ export default async function EquipesPage({ searchParams }: { searchParams?: { a
     return "bg-gray-100 text-gray-700";
   };
 
-  const totalEquipes = competicoes?.reduce((acc, c) => acc + (c.equipes?.length || 0), 0) || 0;
-  const totalCompeticoes = competicoes?.length || 0;
-  const totalPendentes = competicoes?.reduce(
-    (acc, c) => acc + (c.equipes?.filter((e: any) => e.status === "pendente").length || 0), 0
+  const totalEquipes = (competicoes as CompeticaoFromDb[] | null)?.reduce((acc, c) => acc + (c.equipes?.length || 0), 0) || 0;
+  const totalCompeticoes = (competicoes as CompeticaoFromDb[] | null)?.length || 0;
+  const totalPendentes = (competicoes as CompeticaoFromDb[] | null)?.reduce(
+    (acc, c) => acc + (c.equipes?.filter((e: EquipeFromDb) => e.status === "pendente").length || 0), 0
   ) || 0;
 
-  // Filtro por ano e termo de busca
   const anoSelecionado = searchParams?.ano || "";
   const termoBusca = (searchParams?.termo || "").toLowerCase();
 
-  const competicoesFiltradas = (competicoes || []).filter((competicao) => {
+  const competicoesFiltradas = ((competicoes as CompeticaoFromDb[]) || []).filter((competicao) => {
     const anoCompeticao = competicao.periodo_competicao_inicio?.slice(0, 4);
     const nomeCompeticao = (competicao.nome || "").toLowerCase();
-    const equipesFiltradas = (competicao.equipes || []).filter((equipe: any) => {
+    const equipesFiltradas = (competicao.equipes || []).filter((equipe) => {
       const nomeEquipe = (equipe.nome || "").toLowerCase();
       return (
         !termoBusca ||
@@ -72,7 +97,7 @@ export default async function EquipesPage({ searchParams }: { searchParams?: { a
     );
   }).map((competicao) => ({
     ...competicao,
-    equipes: (competicao.equipes || []).filter((equipe: any) => {
+    equipes: (competicao.equipes || []).filter((equipe) => {
       const nomeEquipe = (equipe.nome || "").toLowerCase();
       const nomeCompeticao = (competicao.nome || "").toLowerCase();
       return (
@@ -83,9 +108,8 @@ export default async function EquipesPage({ searchParams }: { searchParams?: { a
     }),
   }));
 
-  // Gerar lista de anos disponíveis
   const anosDisponiveis = Array.from(
-    new Set((competicoes || []).map(c => c.periodo_competicao_inicio?.slice(0, 4)).filter(Boolean))
+    new Set(((competicoes as CompeticaoFromDb[]) || []).map(c => c.periodo_competicao_inicio?.slice(0, 4)).filter(Boolean))
   ).sort((a, b) => Number(b) - Number(a));
 
   return (
@@ -162,7 +186,7 @@ export default async function EquipesPage({ searchParams }: { searchParams?: { a
                 </div>
                 {competicao.equipes && competicao.equipes.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {competicao.equipes.map((equipe: any) => {
+                    {competicao.equipes.map((equipe) => {
                       const playerCount = equipe.jogadores?.[0]?.count || 0;
                       return (
                         <div key={equipe.id} className="border border-gray-200 rounded-lg p-4 bg-white flex flex-col justify-between hover:shadow transition">

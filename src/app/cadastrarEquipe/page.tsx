@@ -27,6 +27,13 @@ interface Competicao {
   atualizado_em: string;
 }
 
+interface Jogador {
+  nome: string;
+  matricula: string;
+  turma: string;
+  selected: boolean;
+}
+
 export default function CadastrarEquipe() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -42,13 +49,12 @@ export default function CadastrarEquipe() {
   const [errorCompeticoes, setErrorCompeticoes] = useState<string | null>(null);
   const supabase = createClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [jogadores, setJogadores] = useState([
+  const [jogadores, setJogadores] = useState<Jogador[]>([
     { nome: "", matricula: "", turma: "", selected: true },
   ]);
-
+  
   useEffect(() => {
-    const progressValues: any = {
+    const progressValues: Record<number, string> = {
       0: "0%",
       1: "33.00%",
       2: "66.00%",
@@ -76,7 +82,7 @@ export default function CadastrarEquipe() {
     updatedJogadores[index].selected = !updatedJogadores[index].selected;
     setJogadores(updatedJogadores);
   };
-  const handleJogadorChange = (index: number, field: string, value: string) => {
+  const handleJogadorChange = (index: number, field: keyof Jogador, value: string) => {
     const updatedJogadores = [...jogadores];
     updatedJogadores[index][field] = value;
     setJogadores(updatedJogadores);
@@ -110,12 +116,12 @@ export default function CadastrarEquipe() {
           Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
         );
 
-        const { data, error } = await supabase.from("competicoes").select("*");
+        const { data, error: supabaseError } = await supabase.from("competicoes").select("*");
 
-        if (error) throw error;
+        if (supabaseError) throw supabaseError;
 
         const competicoesFiltradas =
-          data?.filter((comp) => {
+          data?.filter((comp: Competicao) => {
             const inicio = parseDate(comp.periodo_inscricao_inicio);
             const fim = parseDate(comp.periodo_inscricao_fim);
             return hojeUTC >= inicio && hojeUTC <= fim;
@@ -127,7 +133,7 @@ export default function CadastrarEquipe() {
             "Não há competições com inscrições abertas no momento."
           );
         }
-      } catch (error) {
+      } catch {
         setErrorCompeticoes(
           "Erro ao carregar competições. Tente novamente mais tarde."
         );
@@ -137,7 +143,8 @@ export default function CadastrarEquipe() {
     };
 
     carregarCompeticoes();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   const nextStep = () => {
     if (
@@ -169,7 +176,6 @@ export default function CadastrarEquipe() {
 
   const handleFinalizarInscricao = async () => {
     setIsSubmitting(true);
-    setSubmitError(null);
 
     try {
       if (!competicao) {
@@ -217,8 +223,12 @@ export default function CadastrarEquipe() {
 
       alert("Inscrição realizada com sucesso! Aguarde a aprovação.");
       router.push("/login");
-    } catch (error: any) {
-      setSubmitError(error.message || "Ocorreu um erro desconhecido");
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error.message || "Ocorreu um erro desconhecido");
+      } else {
+        alert("Ocorreu um erro desconhecido");
+      }
     } finally {
       setIsSubmitting(false);
     }

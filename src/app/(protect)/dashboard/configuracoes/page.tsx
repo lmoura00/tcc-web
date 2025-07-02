@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import Image from "next/image";
 
 export default async function ConfiguracoesPage() {
   const supabase = createClient();
@@ -57,7 +58,7 @@ export default async function ConfiguracoesPage() {
       revalidatePath("/configuracoes");
       return;
     } catch (error) {
-      return;
+      console.error("Erro ao atualizar perfil:", error);
     }
   }
 
@@ -79,7 +80,7 @@ export default async function ConfiguracoesPage() {
               <div className="flex items-center space-x-4">
                 {profile?.photo_url ? (
                   <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">
-                    <img
+                    <Image
                       src={profile.photo_url}
                       alt="Foto de perfil"
                       className="w-full h-full object-cover"

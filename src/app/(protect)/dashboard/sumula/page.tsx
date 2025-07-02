@@ -374,8 +374,8 @@ const SumulaFutsal = () => {
               setJogadoresSumula(payload.new.presenca_jogadores || { equipeA: [], equipeB: [] });
               setTempo(prev => ({
                 ...prev,
-                tempoAtual: (payload.new as any).tempo_decorrido || 0,
-                periodo: (payload.new as any).periodo_atual || "1T",
+                tempoAtual: (payload.new as { tempo_decorrido?: number }).tempo_decorrido || 0,
+                periodo: (payload.new as { periodo_atual?: "1T" | "Intervalo" | "2T" | "Fim" }).periodo_atual || "1T",
                 rodando: false,
               }));
               setArbitroPrincipal(payload.new.arbitro_principal || "");
@@ -436,7 +436,7 @@ const SumulaFutsal = () => {
         setError("Erro ao salvar súmula: " + upsertError.message);
         alert("Erro ao salvar súmula: " + upsertError.message);
       }
-    } catch (err) {
+    } catch {
       setError("Erro inesperado ao salvar súmula.");
       alert("Erro inesperado ao salvar súmula.");
     } finally {
@@ -672,7 +672,7 @@ const SumulaFutsal = () => {
         ))}
       </div>
     );
-  }, [faltas, handleFalta, tempo.periodo, cartoes.vermelhos]);
+  }, [handleFalta, tempo.periodo, cartoes.vermelhos]);
 
   const renderDocumentacao = useCallback((equipe: "equipeA" | "equipeB") => {
     const isOk = documentacaoOk[equipe];

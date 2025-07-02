@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FiPlus, FiCalendar, FiClock, FiUsers } from "react-icons/fi";
 import { createClient } from "@/lib/supabase/server";
 import { TeamStatusDropdown } from "./components/TeamStatusDropdown";
@@ -86,12 +87,12 @@ export default async function DashboardPage() {
             <p className="text-gray-500 mt-1 text-base">Bem-vindo, <span className="font-semibold">{fullName.trim()}</span></p>
           )}
         </div>
-        <a
+        <Link
           href="/dashboard/competicoes/nova"
           className="flex items-center px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-colors"
         >
           <FiPlus className="mr-2" /> Nova Competição
-        </a>
+        </Link>
       </div>
 
       <section className="bg-white rounded-lg shadow-md p-6 mb-10">
@@ -327,12 +328,12 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end space-y-2">
-                    <a
+                    <Link
                       href={`/dashboard/competicoes/${competicao.id}`}
                       className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
                     >
                       Ver Detalhes
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>
