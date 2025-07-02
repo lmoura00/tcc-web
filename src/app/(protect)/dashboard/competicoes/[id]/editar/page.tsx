@@ -3,20 +3,18 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { handleSubmit } from "./action"
 
-export default async function EditarCompeticaoPage({
-  params
-}: {
+type EditarCompeticaoPageProps = {
   params: { id: string }
-}) {
+}
+
+export default async function EditarCompeticaoPage({ params }: EditarCompeticaoPageProps) {
   const supabase = createClient()
-  console.log(`PARAMS: ${params.id}`)
   const { data: { user } } = await (await supabase).auth.getUser()
   
   if (!user) {
     redirect("/login")
   }
 
-  // Buscar a competição
   const { data: competicao } = await (await supabase)
     .from('competicoes')
     .select('*')
@@ -27,13 +25,11 @@ export default async function EditarCompeticaoPage({
     return notFound()
   }
 
-  // Buscar todas as modalidades disponíveis
   const { data: modalidades } = await (await supabase)
     .from('modalidades')
     .select('id, nome')
     .order('nome', { ascending: true })
 
-  // Buscar modalidades selecionadas para esta competição
   const { data: modalidadesSelecionadas } = await (await supabase)
     .from('competicoes_modalidades')
     .select('modalidade_id')
@@ -41,12 +37,9 @@ export default async function EditarCompeticaoPage({
 
   const modalidadesSelecionadasIds = modalidadesSelecionadas?.map(m => m.modalidade_id) || []
 
-  
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h1 className="text-2xl font-semibold text-gray-700 mb-6">Editar Competição</h1>
-      
       <form action={handleSubmit} className="max-w-lg space-y-4">
         <input type="hidden" name="competicaoId" value={params.id} />
         <div>
@@ -61,7 +54,6 @@ export default async function EditarCompeticaoPage({
             required
           />
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -75,7 +67,6 @@ export default async function EditarCompeticaoPage({
               required
             />
           </div>
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fim das Inscrições*
@@ -89,7 +80,6 @@ export default async function EditarCompeticaoPage({
             />
           </div>
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -103,7 +93,6 @@ export default async function EditarCompeticaoPage({
               required
             />
           </div>
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fim da Competição*
@@ -117,8 +106,6 @@ export default async function EditarCompeticaoPage({
             />
           </div>
         </div>
-
-        {/* Seção de Modalidades */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Modalidades*
@@ -141,7 +128,6 @@ export default async function EditarCompeticaoPage({
             ))}
           </div>
         </div>
-        
         <div className="flex space-x-3 pt-2">
           <button
             type="submit"
@@ -149,7 +135,6 @@ export default async function EditarCompeticaoPage({
           >
             Salvar Alterações
           </button>
-          
           <Link
             href={`/dashboard/competicoes/${params.id}`}
             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
