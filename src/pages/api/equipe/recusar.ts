@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const { teamId, feedback } = req.body;
+  const { teamId } = req.body;
   const supabase = createClient();
 
   // Busca o responsável da equipe

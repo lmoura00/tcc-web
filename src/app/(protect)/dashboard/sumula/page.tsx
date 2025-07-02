@@ -253,7 +253,7 @@ const SumulaFutsal = () => {
         setArbitroPrincipal(parsed.arbitroPrincipal || "");
         setArbitroAuxiliar(parsed.arbitroAuxiliar || "");
         setAnotador(parsed.anotador || "");
-      } catch (e) {
+      } catch {
         resetSumulaStates();
       }
     } else {
@@ -672,7 +672,7 @@ const SumulaFutsal = () => {
         ))}
       </div>
     );
-  }, [handleFalta, tempo.periodo, cartoes.vermelhos]);
+  }, [faltas, handleFalta, tempo.periodo, cartoes.vermelhos]);
 
   const renderDocumentacao = useCallback((equipe: "equipeA" | "equipeB") => {
     const isOk = documentacaoOk[equipe];
@@ -783,7 +783,7 @@ const SumulaFutsal = () => {
           ).length === 0 && <p className="ml-2 text-gray-500 italic">Nenhuma suspensão.</p>}
       </div>
     </div>
-  ), [jogadoresSumula, equipes, cartoes, faltas, tempo.periodo, renderCartoesAmarelos, renderCartaoVermelho, renderFaltas, handleNumeroCamisaChange, togglePresenca, suspensoes]);
+  ), [jogadoresSumula, equipes, cartoes, tempo.periodo, renderCartoesAmarelos, renderCartaoVermelho, renderFaltas, handleNumeroCamisaChange, togglePresenca, suspensoes]);
 
   // --- Main Render ---
   return (
