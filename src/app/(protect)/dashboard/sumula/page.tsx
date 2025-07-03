@@ -330,7 +330,7 @@ const SumulaFutsal = () => {
           setFaltas(data.faltas || {});
           setTimeouts({ equipeA: data.timeouts_equipe_a || 0, equipeB: data.timeouts_equipe_b || 0 });
           setObservacoes(data.observacoes || "");
-          setDocumentacaoOk({ equipeA: data.documentacao_ok_equipe_a || false, equipeB: data.documentacao_ok_equipe_b || false });
+          setDocumentacaoOk(data.documentacao_ok || { equipeA: false, equipeB: false });
           setJogadoresSumula(data.presenca_jogadores || { equipeA: [], equipeB: [] });
           setTempo(prev => ({
             ...prev,
@@ -370,7 +370,7 @@ const SumulaFutsal = () => {
               setFaltas(payload.new.faltas || {});
               setTimeouts({ equipeA: payload.new.timeouts_equipe_a || 0, equipeB: payload.new.timeouts_equipe_b || 0 });
               setObservacoes(payload.new.observacoes || "");
-              setDocumentacaoOk({ equipeA: payload.new.documentacao_ok_equipe_a || false, equipeB: payload.new.documentacao_ok_equipe_b || false });
+              setDocumentacaoOk(payload.new.documentacao_ok || { equipeA: false, equipeB: false });
               setJogadoresSumula(payload.new.presenca_jogadores || { equipeA: [], equipeB: [] });
               setTempo(prev => ({
                 ...prev,
@@ -410,23 +410,16 @@ const SumulaFutsal = () => {
           gols_equipe_b: placar.equipeB,
           cartoes_amarelos: cartoes.amarelos,
           cartoes_vermelhos: cartoes.vermelhos,
-          suspensoes: suspensoes,
           faltas: faltas,
-          timeouts_equipe_a: timeouts.equipeA,
-          timeouts_equipe_b: timeouts.equipeB,
-          documentacao_ok_equipe_a: documentacaoOk.equipeA,
-          documentacao_ok_equipe_b: documentacaoOk.equipeB,
           observacoes: observacoes,
-          tempo_primeiro: tempo.primeiroTempo,
-          tempo_segundo: tempo.segundoTempo,
-          tempo_intervalo: tempo.intervalo,
-          tempo_decorrido: tempo.tempoAtual,
-          periodo_atual: tempo.periodo,
           presenca_jogadores: jogadoresSumula,
+          suspensoes: suspensoes,
+          timeouts: timeouts,
+          documentacao_ok: documentacaoOk,
+          tempo: tempo,
           arbitro_principal: arbitroPrincipal,
           arbitro_auxiliar: arbitroAuxiliar,
           anotador: anotador,
-          atualizado_em: now,
         },
         { onConflict: 'partida_id' }
       );

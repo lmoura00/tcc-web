@@ -1,6 +1,5 @@
 "use server";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Trash2,
@@ -32,6 +31,8 @@ import { createClient } from "@/lib/supabase/server";
 import { deleteCompetition, shuffleMatches } from "../action";
 import { TeamStatusDropdown } from "../../components/TeamStatusDropdown";
 import { ShuffleMatchesButton } from "../../components/ShuffleMatchesButton";
+import { Trophy, FileText } from "lucide-react";
+import Link from "next/link";
 
 const parseDate = (dateString: string) => {
   const [year, month, day] = dateString.split("-");
@@ -403,6 +404,153 @@ export default async function DetalhesCompeticaoPage(props: any) {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* TABELA DE CLASSIFICAÇÃO */}
+          <div className="mt-10">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 flex items-center gap-2 mb-3">
+              <Trophy className="h-5 w-5" /> Classificação
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1">Equipe</th>
+                    <th className="border px-2 py-1">Pontos</th>
+                    <th className="border px-2 py-1">Vitórias</th>
+                    <th className="border px-2 py-1">Empates</th>
+                    <th className="border px-2 py-1">Derrotas</th>
+                    <th className="border px-2 py-1">GP</th>
+                    <th className="border px-2 py-1">GC</th>
+                    <th className="border px-2 py-1">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(async () => {
+                    // Calcula classificação a partir das sumulas
+                    const tabela: Record<string, any> = {};
+                    equipes?.forEach(eq => {
+                      tabela[eq.id] = {
+                        nome: eq.nome,
+                        pontos: 0,
+                        vitorias: 0,
+                        empates: 0,
+                        derrotas: 0,
+                        gp: 0,
+                        gc: 0,
+                        saldo: 0,
+                      };
+                    });
+                    // Busca sumulas das partidas desta competição
+                    const sumulasCompeticao = await (await supabase)
+                      .from("sumulas")
+                      .select("equipe_a_id, equipe_b_id, gols_equipe_a, gols_equipe_b")
+                      .in("partida_id", partidas?.map(p => p.id) || []);
+                    sumulasCompeticao.data?.forEach(s => {
+                      if (s.gols_equipe_a == null || s.gols_equipe_b == null) return;
+                      // Equipe A
+                      tabela[s.equipe_a_id].gp += s.gols_equipe_a;
+                      tabela[s.equipe_a_id].gc += s.gols_equipe_b;
+                      tabela[s.equipe_a_id].saldo += s.gols_equipe_a - s.gols_equipe_b;
+                      // Equipe B
+                      tabela[s.equipe_b_id].gp += s.gols_equipe_b;
+                      tabela[s.equipe_b_id].gc += s.gols_equipe_a;
+                      tabela[s.equipe_b_id].saldo += s.gols_equipe_b - s.gols_equipe_a;
+                      if (s.gols_equipe_a > s.gols_equipe_b) {
+                        tabela[s.equipe_a_id].vitorias += 1;
+                        tabela[s.equipe_a_id].pontos += 3;
+                        tabela[s.equipe_b_id].derrotas += 1;
+                      } else if (s.gols_equipe_a < s.gols_equipe_b) {
+                        tabela[s.equipe_b_id].vitorias += 1;
+                        tabela[s.equipe_b_id].pontos += 3;
+                        tabela[s.equipe_a_id].derrotas += 1;
+                      } else {
+                        tabela[s.equipe_a_id].empates += 1;
+                        tabela[s.equipe_b_id].empates += 1;
+                        tabela[s.equipe_a_id].pontos += 1;
+                        tabela[s.equipe_b_id].pontos += 1;
+                      }
+                    });
+                    const classificacao = Object.values(tabela).sort((a, b) =>
+                      b.pontos - a.pontos ||
+                      b.saldo - a.saldo ||
+                      b.gp - a.gp
+                    );
+                    return classificacao.map((eq, i) => (
+                      <tr key={i}>
+                        <td className="border px-2 py-1">{eq.nome}</td>
+                        <td className="border px-2 py-1">{eq.pontos}</td>
+                        <td className="border px-2 py-1">{eq.vitorias}</td>
+                        <td className="border px-2 py-1">{eq.empates}</td>
+                        <td className="border px-2 py-1">{eq.derrotas}</td>
+                        <td className="border px-2 py-1">{eq.gp}</td>
+                        <td className="border px-2 py-1">{eq.gc}</td>
+                        <td className="border px-2 py-1">{eq.saldo}</td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+     
+          <div className="mt-10">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5" /> Resultados das Partidas
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1">Data</th>
+                    <th className="border px-2 py-1">Equipe A</th>
+                    <th className="border px-2 py-1">Placar</th>
+                    <th className="border px-2 py-1">Equipe B</th>
+                    <th className="border px-2 py-1">Súmula</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {partidas?.map(async (partida) => {
+                    const sumula = await (await supabase)
+                      .from("sumulas")
+                      .select("gols_equipe_a, gols_equipe_b")
+                      .eq("partida_id", partida.id)
+                      .single();
+                    const equipeA = equipes?.find(e => e.id === partida.equipe_a_id);
+                    const equipeB = equipes?.find(e => e.id === partida.equipe_b_id);
+                    return (
+                      <tr key={partida.id}>
+                        <td className="border px-2 py-1">
+                          {partida.data
+                            ? new Date(partida.data).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </td>
+                        <td className="border px-2 py-1">{equipeA?.nome || "-"}</td>
+                        <td className="border px-2 py-1">
+                          {sumula.data
+                            ? `${sumula.data.gols_equipe_a} x ${sumula.data.gols_equipe_b}`
+                            : "-"}
+                        </td>
+                        <td className="border px-2 py-1">{equipeB?.nome || "-"}</td>
+                        <td className="border px-2 py-1">
+                          {sumula.data ? (
+                            <Link
+                              href={`/dashboard/sumula/${partida.id}`}
+                              className="text-blue-600 underline"
+                            >
+                              Ver Súmula
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
