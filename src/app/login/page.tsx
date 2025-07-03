@@ -1,10 +1,12 @@
 "use client";
-import { useActionState } from "react";
-import { login } from "./action";
+import { useFormState } from "react-dom";
+import { login, LoginState } from "./action"; 
 import Image from "next/image";
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { useEffect, useState } from "react";
+
+
 
 type Partida = {
   id: string;
@@ -16,7 +18,7 @@ type Partida = {
 };
 
 const LoginPage = () => {
-  const [state, formAction] = useActionState(login, { error: "" });
+  const [state, formAction] = useFormState<LoginState, FormData>(login, {});
   const [proximasPartidas, setProximasPartidas] = useState<Partida[]>([]);
 
   useEffect(() => {
@@ -48,47 +50,6 @@ const LoginPage = () => {
               className="mb-2 w-full h-auto object-contain"
             />
           </div>
-        </div>
-
-        <div className="w-full max-w-lg mx-auto mt-8">
-          <h3 className="text-lg font-bold text-green-700 mb-2">
-            Próximos Jogos
-          </h3>
-          {proximasPartidas.length > 0 ? (
-            <ul className="space-y-2">
-              {proximasPartidas.map((partida) => (
-                <li
-                  key={partida.id}
-                  className="bg-green-50 border border-green-200 rounded p-3 text-left"
-                >
-                  <div className="font-semibold text-green-900">
-                    {partida.equipe_a?.nome}{" "}
-                    <span className="mx-1 text-gray-500">vs</span>{" "}
-                    {partida.equipe_b?.nome}
-                  </div>
-                  <div className="text-sm text-gray-700">
-                    {partida.competicao?.nome && (
-                      <span className="italic">{partida.competicao.nome} • </span>
-                    )}
-                    {partida.data
-                      ? new Date(partida.data).toLocaleString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "Data a definir"}
-                    {partida.local && <span> • {partida.local}</span>}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-gray-500 text-sm">
-              Nenhuma partida futura agendada.
-            </div>
-          )}
         </div>
       </div>
       <form
@@ -125,6 +86,46 @@ const LoginPage = () => {
           >
             CADASTRAR EQUIPE
           </Link>
+        </div>
+        <div className="w-full max-w-xs mx-auto mt-8">
+          <h3 className="text-lg font-bold text-green-100 mb-2 text-center">
+            Próximos Jogos
+          </h3>
+          {proximasPartidas.length > 0 ? (
+            <ul className="space-y-2">
+              {proximasPartidas.map((partida) => (
+                <li
+                  key={partida.id}
+                  className="bg-green-50 border border-green-200 rounded p-3 text-left"
+                >
+                  <div className="font-semibold text-green-900">
+                    {partida.equipe_a?.nome}{" "}
+                    <span className="mx-1 text-gray-500">vs</span>{" "}
+                    {partida.equipe_b?.nome}
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    {partida.competicao?.nome && (
+                      <span className="italic">{partida.competicao.nome} • </span>
+                    )}
+                    {partida.data
+                      ? new Date(partida.data).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "Data a definir"}
+                    {partida.local && <span> • {partida.local}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-green-100 text-sm text-center">
+              Nenhuma partida futura agendada.
+            </div>
+          )}
         </div>
       </form>
     </div>

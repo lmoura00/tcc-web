@@ -3,9 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-type LoginState = { error?: string };
+export type LoginState = { error?: string };
 
-export async function login(prevState: LoginState, formData: FormData): Promise<LoginState | void> {
+export async function login(prevState: LoginState, formData: FormData): Promise<LoginState> {
   const supabase = createClient();
 
   const email = formData.get("email") as string;
@@ -36,7 +36,7 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
     return { error: errorMessage };
   }
 
-  if (!error) {
-    return redirect("/dashboard");
-  }
+  // Sempre retorna um objeto, mesmo após o redirect
+  redirect("/dashboard");
+  return {}; // <- Adicione esta linha para garantir o tipo
 }

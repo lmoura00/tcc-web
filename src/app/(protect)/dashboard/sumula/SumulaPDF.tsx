@@ -7,25 +7,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' }
 });
 
-type Equipe = {
-  nome: string;
+export type SumulaPDFProps = {
+  partida: any;
+  equipes: any;
+  placar: any;
+  observacoes: any;
+  cartoes: any; // <-- adicione esta linha
 };
-
-type Partida = {
-  local: string;
-  data: string | Date;
-};
-
-type Placar = {
-  equipeA: number;
-  equipeB: number;
-};
-
-interface SumulaPDFProps {
-  partida: Partida;
-  equipes: Equipe[];
-  placar: Placar;
-}
 
 const SumulaPDF: React.FC<SumulaPDFProps> = ({ partida, equipes, placar }) => (
   <Document>

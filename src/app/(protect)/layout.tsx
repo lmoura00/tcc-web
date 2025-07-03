@@ -16,8 +16,18 @@ export default async function Layout({
     return redirect("/login");
   }
 
+  const { data: profile, error } = await (await supabase)
+    .from("profiles")
+    .select("id, first_name, last_name, photo_url, email, created_at, updated_at")
+    .eq("id", user.id)
+    .single();
+
+  if (error || !profile) {
+    return redirect("/login");
+  }
+
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout user={profile}>
       {children}
     </DashboardLayout>
   );

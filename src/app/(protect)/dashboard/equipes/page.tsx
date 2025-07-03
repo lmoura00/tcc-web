@@ -23,11 +23,10 @@ type CompeticaoFromDb = {
   equipes: EquipeFromDb[];
 };
 
-interface EquipesPageProps {
-  searchParams?: { ano?: string; termo?: string };
-}
 
-export default async function EquipesPage({ searchParams }: EquipesPageProps) {
+
+export default async function EquipeDetailsPage(props:any) {
+  console.log("EquipesPage props:", props);
   const supabase = createClient();
 
   const { data: competicoes, error } = await (await supabase)
@@ -77,6 +76,7 @@ export default async function EquipesPage({ searchParams }: EquipesPageProps) {
     (acc, c) => acc + (c.equipes?.filter((e: EquipeFromDb) => e.status === "pendente").length || 0), 0
   ) || 0;
 
+  const searchParams = props.searchParams || {};
   const anoSelecionado = searchParams?.ano || "";
   const termoBusca = (searchParams?.termo || "").toLowerCase();
 

@@ -26,6 +26,13 @@ interface Team {
   status: string;
   competicao_id: string;
 }
+
+export interface ShuffleState {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
 export async function deleteCompetition(competitionId: string) {
   const supabase = createClient();
   const { error } = await (await supabase)

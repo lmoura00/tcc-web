@@ -83,10 +83,10 @@ export default function CadastrarEquipe() {
     setJogadores(updatedJogadores);
   };
   const handleJogadorChange = (index: number, field: keyof Jogador, value: string) => {
-    const updatedJogadores = [...jogadores];
-    updatedJogadores[index][field] = value;
-    setJogadores(updatedJogadores);
-  };
+  const updatedJogadores = [...jogadores];
+  (updatedJogadores[index][field] as string) = value;
+  setJogadores(updatedJogadores);
+};
 
   const removeJogador = (index: number) => {
     if (jogadores.length <= 1) {

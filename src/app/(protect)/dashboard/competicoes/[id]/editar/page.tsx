@@ -3,11 +3,10 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { handleSubmit } from "./action"
 
-type EditarCompeticaoPageProps = {
-  params: { id: string }
-}
 
-export default async function EditarCompeticaoPage({ params }: EditarCompeticaoPageProps) {
+export default async function EditarCompeticaoPage(props: any) {
+  const { params } = props;
+  const { id } = params;
   const supabase = createClient()
   const { data: { user } } = await (await supabase).auth.getUser()
   
@@ -18,7 +17,7 @@ export default async function EditarCompeticaoPage({ params }: EditarCompeticaoP
   const { data: competicao } = await (await supabase)
     .from('competicoes')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!competicao) {
@@ -33,7 +32,7 @@ export default async function EditarCompeticaoPage({ params }: EditarCompeticaoP
   const { data: modalidadesSelecionadas } = await (await supabase)
     .from('competicoes_modalidades')
     .select('modalidade_id')
-    .eq('competicao_id', params.id)
+    .eq('competicao_id', id)
 
   const modalidadesSelecionadasIds = modalidadesSelecionadas?.map(m => m.modalidade_id) || []
 
@@ -41,7 +40,7 @@ export default async function EditarCompeticaoPage({ params }: EditarCompeticaoP
     <div className="bg-white rounded-lg shadow-md p-6">
       <h1 className="text-2xl font-semibold text-gray-700 mb-6">Editar Competição</h1>
       <form action={handleSubmit} className="max-w-lg space-y-4">
-        <input type="hidden" name="competicaoId" value={params.id} />
+        <input type="hidden" name="competicaoId" value={id} />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nome da Competição*
@@ -136,7 +135,7 @@ export default async function EditarCompeticaoPage({ params }: EditarCompeticaoP
             Salvar Alterações
           </button>
           <Link
-            href={`/dashboard/competicoes/${params.id}`}
+            href={`/dashboard/competicoes/${id}`}
             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
             Cancelar

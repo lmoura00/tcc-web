@@ -49,6 +49,7 @@ export interface Profile {
 }
 
 export interface Jogador {
+  count: number;
   id: string;
   equipe_id: string;  
   nome: string;

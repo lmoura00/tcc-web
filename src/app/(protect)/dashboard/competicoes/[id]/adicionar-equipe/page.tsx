@@ -23,13 +23,8 @@ type Equipe = {
 };
 
 
-type PageParams = {
-  id: string;
-};
-
-
 type PageProps = {
-  params: Promise<PageParams>;
+  params: Promise<any>;
 };
 
 export default function AdicionarEquipePage({ params }: PageProps) {
@@ -49,7 +44,7 @@ export default function AdicionarEquipePage({ params }: PageProps) {
     const { data, error } = await supabase
       .from("equipes")
       .select(
-        "id, nome, modalidade, responsavel_nome, responsavel_email, responsavel_turma, created_at, status"
+        "id, nome, membros, modalidade, responsavel_nome, responsavel_email, responsavel_turma, created_at, status, competicao_id"
       )
       .or(`competicao_id.is.null,competicao_id.eq.${id}`);
 
@@ -59,7 +54,14 @@ export default function AdicionarEquipePage({ params }: PageProps) {
     }
 
     if (data) {
-      setEquipesExistentes(data.filter((e) => e.competicao_id !== id));
+      setEquipesExistentes(
+        data
+          .filter((e) => e.competicao_id !== id)
+          .map((e) => ({
+            ...e,
+            membros: e.membros ?? [], 
+          }))
+      );
     }
   };
 

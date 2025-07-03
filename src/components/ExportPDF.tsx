@@ -3,7 +3,16 @@
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import SumulaPDF from './../app/(protect)/dashboard/sumula/SumulaPDF';
 
-const ExportPDF = ({ partida, equipes, placar, cartoes, observacoes, selectedPartida }) => {
+type ExportPDFProps = {
+  partida: any;
+  equipes: any;
+  placar: any;
+  cartoes: any;
+  observacoes: any;
+  selectedPartida: any;
+};
+
+const ExportPDF = ({ partida, equipes, placar, cartoes, observacoes, selectedPartida }: ExportPDFProps) => {
   return (
     <PDFDownloadLink 
       document={<SumulaPDF 

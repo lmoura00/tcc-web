@@ -27,13 +27,8 @@ interface EquipeDetalhada {
   jogadores: Jogador[];
 }
 
-interface EquipeDetailsPageProps {
-  params: {
-    id: string; 
-  };
-}
-
-export default async function EquipeDetailsPage({ params }: EquipeDetailsPageProps) {
+export default async function EquipeDetailsPage(props:any) {
+  const { params } = props;
   const supabase = createClient();
   const equipeId = params.id; 
 

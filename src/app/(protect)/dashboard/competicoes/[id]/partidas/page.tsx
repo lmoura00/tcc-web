@@ -7,11 +7,8 @@ import { updateMatchResult } from "./action";
 import { MatchEditForm } from "./MatchEditForm";
 import { DeleteMatchButton } from "./DeleteMatchButton";
 
-export default async function PartidasCompeticaoPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function PartidasCompeticaoPage(props: any) {
+  const { params } = props;
   const supabase = createClient();
   
   const { data: competicao } = await (await supabase)

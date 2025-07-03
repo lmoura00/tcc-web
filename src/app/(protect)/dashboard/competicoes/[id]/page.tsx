@@ -43,11 +43,8 @@ const formatarData = (date: Date) => {
   return dateLocal.toLocaleDateString("pt-BR");
 };
 
-export default async function DetalhesCompeticaoPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function DetalhesCompeticaoPage(props: any) {
+  const { params } = props;
   const supabase = createClient();
 
   const {
@@ -230,7 +227,29 @@ export default async function DetalhesCompeticaoPage({
                     </Button>
                   </Link>
                 ) : (
-                  <ShuffleMatchesButton action={shuffleMatches.bind(null, params.id)} />
+                  <ShuffleMatchesButton
+                    action={async () => {
+                      try {
+                        const result = await shuffleMatches(params.id);
+                        if (!result || typeof result !== "object") {
+                          return { success: "false", message: "Ocorreu um erro ao sortear as partidas.", error: "unknown" };
+                        }
+
+                        if ("error" in result) {
+                          return { success: "false", message: result.error, error: result.error };
+                        }
+
+                        if ("success" in result) {
+                          return { success: "true", message: result.success, error: undefined };
+                        }
+
+                        // Sucesso genérico
+                        return { success: "true", message: "Partidas sorteadas com sucesso!", error: undefined };
+                      } catch (e: any) {
+                        return { success: "false", message: e?.message || "Erro inesperado ao sortear partidas.", error: e?.message || "unknown" };
+                      }
+                    }}
+                  />
                 )}
 
                 <AlertDialog>

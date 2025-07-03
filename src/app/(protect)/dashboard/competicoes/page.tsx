@@ -4,7 +4,8 @@ import { TeamStatusDropdown } from "../components/TeamStatusDropdown";
 import { Team } from "@/types";
 import Link from "next/link";
 
-export default async function CompeticoesPage({ searchParams }: { searchParams?: { termo?: string; status?: string } }) {
+export default async function CompeticoesPage(props: any) {
+  const searchParams = props.searchParams;
   const supabase = createClient();
 
   const { data: competicoes } = await (await supabase)
