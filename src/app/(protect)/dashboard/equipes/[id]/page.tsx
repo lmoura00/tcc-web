@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { FiUser, FiMail, FiHash, FiInfo, FiCalendar, FiCheckCircle } from "react-icons/fi";
+import { FiUser, FiMail, FiHash, FiInfo, FiCalendar, FiCheckCircle, FiClock } from "react-icons/fi";
 
 interface Jogador {
   id: string;
@@ -55,8 +55,19 @@ export default async function EquipeDetailsPage(props:any) {
 
   const equipeData: EquipeDetalhada = equipe as unknown as EquipeDetalhada;
 
+  const createdAtDate = new Date(equipeData.created_at);
+  const formattedCreatedAt = new Intl.DateTimeFormat('pt-BR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(createdAtDate);
+
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 font-inter">
       <section className="bg-white rounded-lg shadow-md p-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-4">{equipeData.nome}</h1>
         <p className="text-lg text-gray-600 mb-2">Modalidade: <span className="font-semibold">{equipeData.modalidade}</span></p>
@@ -64,10 +75,14 @@ export default async function EquipeDetailsPage(props:any) {
           <FiCheckCircle className="mr-2 text-green-500" /> Status: <span className="font-semibold capitalize">{equipeData.status}</span>
         </p>
         {equipeData.competicoes && (
-          <p className="text-gray-700 mb-6 flex items-center">
+          <p className="text-gray-700 mb-2 flex items-center">
             <FiCalendar className="inline-block mr-2 text-gray-500" /> Competição: <span className="font-semibold">{equipeData.competicoes.nome}</span>
           </p>
         )}
+        <p className="text-gray-700 mb-6 flex items-center">
+          <FiClock className="inline-block mr-2 text-gray-500" /> Criada em: <span className="font-semibold">{formattedCreatedAt}</span>
+        </p>
+
         <div className="border-t pt-6 mt-6">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4">Informações do Responsável</h2>
           <p className="text-gray-700 mb-2 flex items-center">
@@ -80,6 +95,7 @@ export default async function EquipeDetailsPage(props:any) {
             <FiHash className="mr-2 text-gray-500" /> Turma: <span className="font-semibold ml-1">{equipeData.responsavel_turma}</span>
           </p>
         </div>
+
         <div className="border-t pt-6 mt-6">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4">Jogadores ({equipeData.jogadores?.length || 0})</h2>
           {equipeData.jogadores && equipeData.jogadores.length > 0 ? (
