@@ -1,51 +1,41 @@
-"use client";
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+'use client';
+
+import { useTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Shuffle } from "lucide-react";
+import { shuffleMatches } from "@/app/(protect)/dashboard/competicoes/[id]/action";
 
-type ShuffleState = {
-  error: string | null;
-  success: string | null;
-};
+export function ShuffleMatchesButton({ id }: { id: string }) {
+  const [isPending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string | null>(null);
 
-export function ShuffleMatchesButton({
-  action,
-}: {
-  action: () => Promise<ShuffleState>;
-}) {
-  const [state, formAction] = useActionState<ShuffleState, FormData>(action, {
-    error: null,
-    success: null,
-  });
+  const handleClick = () => {
+    startTransition(async () => {
+      const result = await shuffleMatches(id);
+      if (result?.error) {
+        setMessage(`Erro: ${result.error}`);
+      } else {
+        setMessage(result.success || "Partidas sorteadas com sucesso!");
+      }
+    });
+  };
 
   return (
-    <>
-      <form action={formAction}>
-        <ShuffleButton />
-      </form>
-      {state?.error && (
-        <p className="text-red-500 text-sm mt-2">{state.error}</p>
-      )}
-      {state?.success && (
-        <p className="text-green-500 text-sm mt-2">{state.success}</p>
-      )}
-    </>
-  );
-}
+    <div className="flex flex-col sm:flex-row gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex items-center gap-2"
+        onClick={handleClick}
+        disabled={isPending}
+      >
+        <Shuffle className="h-4 w-4" />
+        {isPending ? "Sorteando..." : "Sortear Partidas"}
+      </Button>
 
-function ShuffleButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button
-      type="submit"
-      variant="default"
-      size="sm"
-      className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-      disabled={pending}
-    >
-      <Shuffle className="h-4 w-4" />
-      {pending ? "Sorteando..." : "Sortear"}
-    </Button>
+      {message && (
+        <span className="text-sm text-gray-700 mt-1 sm:mt-0">{message}</span>
+      )}
+    </div>
   );
 }

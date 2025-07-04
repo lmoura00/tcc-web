@@ -28,7 +28,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { createClient } from "@/lib/supabase/server";
-import { deleteCompetition, shuffleMatches } from "../action";
+import { deleteCompetition } from "../action";
 import { TeamStatusDropdown } from "../../components/TeamStatusDropdown";
 import { ShuffleMatchesButton } from "../../components/ShuffleMatchesButton";
 import { Trophy, FileText } from "lucide-react";
@@ -51,7 +51,7 @@ export default async function DetalhesCompeticaoPage(props: any) {
   const {
     data: { user },
   } = await (await supabase).auth.getUser();
-  
+
   const { data: competicao } = await (await supabase)
     .from("competicoes")
     .select("*")
@@ -67,7 +67,9 @@ export default async function DetalhesCompeticaoPage(props: any) {
     .select("*")
     .eq("competicao_id", params.id);
 
-  const { data: jogadores } = await (await supabase)
+  const { data: jogadores } = await (
+    await supabase
+  )
     .from("jogadores")
     .select("*")
     .in("equipe_id", equipes?.map((e) => e.id) || []);
@@ -76,7 +78,7 @@ export default async function DetalhesCompeticaoPage(props: any) {
     .from("partidas")
     .select("*")
     .eq("competicao_id", params.id);
-  
+
   const hoje = new Date();
   const inicioInscricoes = parseDate(competicao.periodo_inscricao_inicio);
   const fimInscricoes = parseDate(competicao.periodo_inscricao_fim);
@@ -105,11 +107,7 @@ export default async function DetalhesCompeticaoPage(props: any) {
     <TooltipProvider>
       <div className="space-y-4 px-2 sm:px-4 md:px-6 lg:px-8 max-w-5xl mx-auto py-4">
         <Alert
-          variant={
-            status.competicaoFinalizada
-              ? "destructive"
-              : "default"
-          }
+          variant={status.competicaoFinalizada ? "destructive" : "default"}
           className="mx-2 sm:mx-0"
         >
           {status.competicaoFinalizada ? (
@@ -228,29 +226,7 @@ export default async function DetalhesCompeticaoPage(props: any) {
                     </Button>
                   </Link>
                 ) : (
-                  <ShuffleMatchesButton
-                    action={async () => {
-                      try {
-                        const result = await shuffleMatches(params.id);
-                        if (!result || typeof result !== "object") {
-                          return { success: "false", message: "Ocorreu um erro ao sortear as partidas.", error: "unknown" };
-                        }
-
-                        if ("error" in result) {
-                          return { success: "false", message: result.error, error: result.error };
-                        }
-
-                        if ("success" in result) {
-                          return { success: "true", message: result.success, error: undefined };
-                        }
-
-                        // Sucesso genérico
-                        return { success: "true", message: "Partidas sorteadas com sucesso!", error: undefined };
-                      } catch (e: any) {
-                        return { success: "false", message: e?.message || "Erro inesperado ao sortear partidas.", error: e?.message || "unknown" };
-                      }
-                    }}
-                  />
+                  <ShuffleMatchesButton id={params.id} />
                 )}
 
                 <AlertDialog>
@@ -273,9 +249,7 @@ export default async function DetalhesCompeticaoPage(props: any) {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <form
-                        action={deleteCompetition.bind(null, params.id)}
-                      >
+                      <form action={deleteCompetition.bind(null, params.id)}>
                         <AlertDialogAction asChild>
                           <Button type="submit" variant="destructive">
                             Confirmar
@@ -428,9 +402,8 @@ export default async function DetalhesCompeticaoPage(props: any) {
                 </thead>
                 <tbody>
                   {(async () => {
-                    // Calcula classificação a partir das sumulas
                     const tabela: Record<string, any> = {};
-                    equipes?.forEach(eq => {
+                    equipes?.forEach((eq) => {
                       tabela[eq.id] = {
                         nome: eq.nome,
                         pontos: 0,
@@ -442,21 +415,28 @@ export default async function DetalhesCompeticaoPage(props: any) {
                         saldo: 0,
                       };
                     });
-                    // Busca sumulas das partidas desta competição
-                    const sumulasCompeticao = await (await supabase)
+
+                    const sumulasCompeticao = await (
+                      await supabase
+                    )
                       .from("sumulas")
-                      .select("equipe_a_id, equipe_b_id, gols_equipe_a, gols_equipe_b")
-                      .in("partida_id", partidas?.map(p => p.id) || []);
-                    sumulasCompeticao.data?.forEach(s => {
-                      if (s.gols_equipe_a == null || s.gols_equipe_b == null) return;
-                      // Equipe A
+                      .select(
+                        "equipe_a_id, equipe_b_id, gols_equipe_a, gols_equipe_b"
+                      )
+                      .in("partida_id", partidas?.map((p) => p.id) || []);
+                    sumulasCompeticao.data?.forEach((s) => {
+                      if (s.gols_equipe_a == null || s.gols_equipe_b == null)
+                        return;
+
                       tabela[s.equipe_a_id].gp += s.gols_equipe_a;
                       tabela[s.equipe_a_id].gc += s.gols_equipe_b;
-                      tabela[s.equipe_a_id].saldo += s.gols_equipe_a - s.gols_equipe_b;
-                      // Equipe B
+                      tabela[s.equipe_a_id].saldo +=
+                        s.gols_equipe_a - s.gols_equipe_b;
+
                       tabela[s.equipe_b_id].gp += s.gols_equipe_b;
                       tabela[s.equipe_b_id].gc += s.gols_equipe_a;
-                      tabela[s.equipe_b_id].saldo += s.gols_equipe_b - s.gols_equipe_a;
+                      tabela[s.equipe_b_id].saldo +=
+                        s.gols_equipe_b - s.gols_equipe_a;
                       if (s.gols_equipe_a > s.gols_equipe_b) {
                         tabela[s.equipe_a_id].vitorias += 1;
                         tabela[s.equipe_a_id].pontos += 3;
@@ -472,10 +452,9 @@ export default async function DetalhesCompeticaoPage(props: any) {
                         tabela[s.equipe_b_id].pontos += 1;
                       }
                     });
-                    const classificacao = Object.values(tabela).sort((a, b) =>
-                      b.pontos - a.pontos ||
-                      b.saldo - a.saldo ||
-                      b.gp - a.gp
+                    const classificacao = Object.values(tabela).sort(
+                      (a, b) =>
+                        b.pontos - a.pontos || b.saldo - a.saldo || b.gp - a.gp
                     );
                     return classificacao.map((eq, i) => (
                       <tr key={i}>
@@ -495,7 +474,6 @@ export default async function DetalhesCompeticaoPage(props: any) {
             </div>
           </div>
 
-     
           <div className="mt-10">
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 flex items-center gap-2 mb-3">
               <FileText className="h-5 w-5" /> Resultados das Partidas
@@ -518,8 +496,12 @@ export default async function DetalhesCompeticaoPage(props: any) {
                       .select("gols_equipe_a, gols_equipe_b")
                       .eq("partida_id", partida.id)
                       .single();
-                    const equipeA = equipes?.find(e => e.id === partida.equipe_a_id);
-                    const equipeB = equipes?.find(e => e.id === partida.equipe_b_id);
+                    const equipeA = equipes?.find(
+                      (e) => e.id === partida.equipe_a_id
+                    );
+                    const equipeB = equipes?.find(
+                      (e) => e.id === partida.equipe_b_id
+                    );
                     return (
                       <tr key={partida.id}>
                         <td className="border px-2 py-1">
@@ -527,13 +509,17 @@ export default async function DetalhesCompeticaoPage(props: any) {
                             ? new Date(partida.data).toLocaleDateString("pt-BR")
                             : "-"}
                         </td>
-                        <td className="border px-2 py-1">{equipeA?.nome || "-"}</td>
+                        <td className="border px-2 py-1">
+                          {equipeA?.nome || "-"}
+                        </td>
                         <td className="border px-2 py-1">
                           {sumula.data
                             ? `${sumula.data.gols_equipe_a} x ${sumula.data.gols_equipe_b}`
                             : "-"}
                         </td>
-                        <td className="border px-2 py-1">{equipeB?.nome || "-"}</td>
+                        <td className="border px-2 py-1">
+                          {equipeB?.nome || "-"}
+                        </td>
                         <td className="border px-2 py-1">
                           {sumula.data ? (
                             <Link
