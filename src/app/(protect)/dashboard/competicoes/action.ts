@@ -11,7 +11,7 @@ interface ActionResult {
   success?: string;
   message?: string;
   redirectTo?: string;
-  warnings?: string[]; 
+  warnings?: string[];
 }
 
 interface MatchResult {
@@ -30,8 +30,6 @@ interface Team {
   status: string;
   competicao_id: string;
 }
-
-
 
 export interface ShuffleState {
   success: boolean;
@@ -89,20 +87,88 @@ export async function handleSubmit(formData: FormData) {
 }
 
 export async function deleteCompetition(competitionId: string) {
-  const supabase = createClient();
-  const { error } = await (await supabase)
-    .from("competicoes")
-    .delete()
-    .eq("id", competitionId);
-  if (error) throw error;
-  redirect("/dashboard/competicoes");
+  const supabase = await createClient(); 
+
+  try {
+
+    const { data: matches, error: matchesError } = await supabase
+      .from("partidas")
+      .select("id")
+      .eq("competicao_id", competitionId);
+
+    if (matchesError) throw new Error(`Failed to fetch matches: ${matchesError.message}`);
+
+    const matchIds = matches?.map(m => m.id) || [];
+
+    if (matchIds.length > 0) {
+      const { error: sumulasDeleteError } = await supabase
+        .from("sumulas")
+        .delete()
+        .in("partida_id", matchIds);
+
+      if (sumulasDeleteError) throw new Error(`Failed to delete sumulas: ${sumulasDeleteError.message}`);
+    }
+
+
+    const { data: teams, error: teamsError } = await supabase
+      .from("equipes")
+      .select("id")
+      .eq("competicao_id", competitionId);
+
+    if (teamsError) throw new Error(`Failed to fetch teams: ${teamsError.message}`);
+
+    const teamIds = teams?.map(t => t.id) || [];
+
+    if (teamIds.length > 0) {
+      const { error: jogadoresDeleteError } = await supabase
+        .from("jogadores")
+        .delete()
+        .in("equipe_id", teamIds);
+
+      if (jogadoresDeleteError) throw new Error(`Failed to delete jogadores: ${jogadoresDeleteError.message}`);
+    }
+
+
+    if (matchIds.length > 0) {
+      const { error: partidasDeleteError } = await supabase
+        .from("partidas")
+        .delete()
+        .in("id", matchIds);
+
+      if (partidasDeleteError) throw new Error(`Failed to delete partidas: ${partidasDeleteError.message}`);
+    }
+
+
+    if (teamIds.length > 0) {
+      const { error: equipesDeleteError } = await supabase
+        .from("equipes")
+        .delete()
+        .in("id", teamIds);
+
+      if (equipesDeleteError) throw new Error(`Failed to delete equipes: ${equipesDeleteError.message}`);
+    }
+
+
+    const { error: competitionDeleteError } = await supabase
+      .from("competicoes")
+      .delete()
+      .eq("id", competitionId);
+
+    if (competitionDeleteError) throw new Error(`Failed to delete competition: ${competitionDeleteError.message}`);
+
+    redirect("/dashboard/competicoes");
+  } catch (error) {
+    console.error("Error during competition deletion:", error);
+    
+    throw error;
+  }
 }
 
 export async function shuffleMatches(
   competitionId: string
 ): Promise<ActionResult> {
   const supabase = await createClient();
-  const warnings: string[] = []; 
+  const warnings: string[] = [];
 
   try {
     const { data: competition } = await supabase
@@ -172,7 +238,6 @@ export async function shuffleMatches(
       const modalityTeams = teamsByModality[modality];
 
       if (modalityTeams.length < 2) {
-       
         warnings.push(`Modalidade '${modality}' tem menos de 2 equipes e foi ignorada na geração de partidas.`);
         continue;
       }
@@ -180,7 +245,6 @@ export async function shuffleMatches(
       for (let i = 0; i < modalityTeams.length; i++) {
         for (let j = i + 1; j < modalityTeams.length; j++) {
           if (currentMatchDate > endDate) {
-           
             return {
               error: "Não há dias suficientes no período da competição para todas as partidas.",
               warnings: warnings.length > 0 ? warnings : undefined,
@@ -207,16 +271,13 @@ export async function shuffleMatches(
     }
 
     if (matchesToInsert.length === 0 && warnings.length === 0) {
-      
       return { error: "Não foi possível gerar partidas. Verifique se há equipes suficientes e aprovadas em pelo menos uma modalidade." };
     } else if (matchesToInsert.length === 0 && warnings.length > 0) {
-      
       return {
         error: "Nenhuma partida foi gerada. Verifique os avisos para mais detalhes.",
         warnings: warnings,
       };
     }
-
 
     const insertResult = await supabase
       .from("partidas")
@@ -232,7 +293,6 @@ export async function shuffleMatches(
 
     await notifyTeamsAboutMatches(competitionId, teams);
 
-    
     return {
       success: "Partidas sorteadas com sucesso!",
       redirectTo: `/dashboard/competicoes/${competitionId}/partidas`,
@@ -244,7 +304,6 @@ export async function shuffleMatches(
       throw err;
     }
     console.error("Erro ao sortear partidas:", err);
-    
     return {
       error: "Ocorreu um erro ao sortear as partidas",
       warnings: warnings.length > 0 ? warnings : undefined,
