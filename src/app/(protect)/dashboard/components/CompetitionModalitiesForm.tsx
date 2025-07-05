@@ -20,8 +20,9 @@ export function CompetitionModalitiesForm({ initialModalidades }: CompetitionMod
 
   useEffect(() => {
     if (initialModalidades) {
-      const uniqueInitialModalities = Array.from(new Set(initialModalidades));
-      setModalities(uniqueInitialModalities.map(name => ({ id: crypto.randomUUID(), name })));
+      // Cria um Set para garantir nomes únicos e depois mapeia para ModalityItem com IDs únicos
+      const uniqueNames = new Set(initialModalidades);
+      setModalities(Array.from(uniqueNames).map(name => ({ id: crypto.randomUUID(), name })));
     } else {
       setModalities([]);
     }
@@ -33,18 +34,22 @@ export function CompetitionModalitiesForm({ initialModalidades }: CompetitionMod
       toast.error("O nome da modalidade não pode ser vazio.");
       return;
     }
+    // Verifica por duplicatas pelo nome (case-insensitive)
     if (modalities.some(m => m.name.toLowerCase() === trimmedInput.toLowerCase())) {
       toast.error("Essa modalidade já está na lista.");
       return;
     }
 
+    // Adiciona nova modalidade com um ID único
     setModalities(prev => [...prev, { id: crypto.randomUUID(), name: trimmedInput }]);
     setNewModalityInput('');
     toast.success(`Modalidade "${trimmedInput}" adicionada. Salve para aplicar.`);
   };
 
+  // Adaptação: agora recebe o ID da modalidade para remover/desmarcar
   const handleCheckboxChange = (modalityIdToToggle: string, isChecked: boolean) => {
     setModalities(prev => {
+      // Se desmarcado, remove a modalidade da lista usando seu ID único
       if (!isChecked) {
         const removedModality = prev.find(m => m.id === modalityIdToToggle);
         if (removedModality) {
@@ -52,6 +57,7 @@ export function CompetitionModalitiesForm({ initialModalidades }: CompetitionMod
         }
         return prev.filter(m => m.id !== modalityIdToToggle);
       }
+      // Se marcado, não faz nada, pois as modalidades são adicionadas via input e já vêm marcadas
       return prev;
     });
   };
@@ -70,7 +76,7 @@ export function CompetitionModalitiesForm({ initialModalidades }: CompetitionMod
                 id={`modality-${modality.id}`}
                 name="modalidades"
                 value={modality.name}
-                checked={true}
+                checked={true} // Sempre marcado se estiver no estado 'modalities'
                 onChange={(e) => handleCheckboxChange(modality.id, e.target.checked)}
                 className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
               />
@@ -102,6 +108,8 @@ export function CompetitionModalitiesForm({ initialModalidades }: CompetitionMod
           Adicionar
         </Button>
       </div>
+      {/* Inputs ocultos para garantir que todas as modalidades no estado sejam enviadas pelo nome.
+          Como o 'handleSubmit' do server agora usa um Set, duplicatas aqui serão ignoradas. */}
       {modalities.map((modality) => (
         <input key={`hidden-${modality.id}`} type="hidden" name="modalidades" value={modality.name} />
       ))}

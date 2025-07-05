@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Jogos IFMA",
@@ -16,6 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br">
+      <Toaster position="top-right" />
       <body>{children}</body>
     </html>
   );

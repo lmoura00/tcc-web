@@ -15,16 +15,18 @@ import {
 } from "react-icons/fi";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner"; 
 
 interface Competicao {
   id: string;
   nome: string;
   periodo_inscricao_inicio: string;
   periodo_inscricao_fim: string;
-  modalidades_disponiveis: string[] | string;
+  modalidades_disponiveis: string;
   criado_por: string;
   criado_em: string;
   atualizado_em: string;
+  parsedModalidades?: string[];
 }
 
 interface Jogador {
@@ -52,7 +54,7 @@ export default function CadastrarEquipe() {
   const [jogadores, setJogadores] = useState<Jogador[]>([
     { nome: "", matricula: "", turma: "", selected: true },
   ]);
-  
+
   useEffect(() => {
     const progressValues: Record<number, string> = {
       0: "0%",
@@ -82,15 +84,16 @@ export default function CadastrarEquipe() {
     updatedJogadores[index].selected = !updatedJogadores[index].selected;
     setJogadores(updatedJogadores);
   };
+
   const handleJogadorChange = (index: number, field: keyof Jogador, value: string) => {
-  const updatedJogadores = [...jogadores];
-  (updatedJogadores[index][field] as string) = value;
-  setJogadores(updatedJogadores);
-};
+    const updatedJogadores = [...jogadores];
+    (updatedJogadores[index][field] as string) = value;
+    setJogadores(updatedJogadores);
+  };
 
   const removeJogador = (index: number) => {
     if (jogadores.length <= 1) {
-      alert("A equipe deve ter pelo menos um jogador!");
+      toast.error("A equipe deve ter pelo menos um jogador!");
       return;
     }
     const updatedJogadores = [...jogadores];
@@ -120,12 +123,29 @@ export default function CadastrarEquipe() {
 
         if (supabaseError) throw supabaseError;
 
-        const competicoesFiltradas =
-          data?.filter((comp: Competicao) => {
-            const inicio = parseDate(comp.periodo_inscricao_inicio);
-            const fim = parseDate(comp.periodo_inscricao_fim);
-            return hojeUTC >= inicio && hojeUTC <= fim;
-          }) || [];
+        const competicoesProcessadas = data?.map((comp: Competicao) => {
+          let modalidadesUnicas: string[] = [];
+          if (comp.modalidades_disponiveis) {
+            try {
+              const parsed = JSON.parse(comp.modalidades_disponiveis);
+              if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+                modalidadesUnicas = Array.from(new Set(parsed));
+              } else {
+                modalidadesUnicas = Array.from(new Set(comp.modalidades_disponiveis.replace(/[\[\]"]/g, "").split(",").map(s => s.trim())));
+              }
+            } catch (e) {
+              console.error("Falha ao parsear modalidades_disponiveis para competição", comp.id, e);
+              modalidadesUnicas = Array.from(new Set(comp.modalidades_disponiveis.replace(/[\[\]"]/g, "").split(",").map(s => s.trim())));
+            }
+          }
+          return { ...comp, parsedModalidades: modalidadesUnicas };
+        }) || [];
+
+        const competicoesFiltradas = competicoesProcessadas.filter((comp: Competicao) => {
+          const inicio = parseDate(comp.periodo_inscricao_inicio);
+          const fim = parseDate(comp.periodo_inscricao_fim);
+          return hojeUTC >= inicio && hojeUTC <= fim;
+        });
 
         setCompeticoes(competicoesFiltradas);
         if (competicoesFiltradas.length === 0) {
@@ -133,7 +153,8 @@ export default function CadastrarEquipe() {
             "Não há competições com inscrições abertas no momento."
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Erro ao carregar competições:", err);
         setErrorCompeticoes(
           "Erro ao carregar competições. Tente novamente mais tarde."
         );
@@ -143,20 +164,19 @@ export default function CadastrarEquipe() {
     };
 
     carregarCompeticoes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+  }, []);
 
   const nextStep = () => {
     if (
       step === 1 &&
       (!modalidade || !nomeCompleto || !email || !turma || !nomeEquipe)
     ) {
-      alert("Preencha todos os campos obrigatórios!");
+      toast.error("Preencha todos os campos obrigatórios!");
       return;
     }
 
     if (step === 2 && jogadores.filter((j) => j.selected).length === 0) {
-      alert("Adicione pelo menos um jogador para continuar!");
+      toast.error("Adicione pelo menos um jogador para continuar!");
       return;
     }
 
@@ -221,13 +241,13 @@ export default function CadastrarEquipe() {
 
       if (jogadoresError) throw jogadoresError;
 
-      alert("Inscrição realizada com sucesso! Aguarde a aprovação.");
+      toast.success("Inscrição realizada com sucesso! Aguarde a aprovação.");
       router.push("/login");
     } catch (error) {
       if (error instanceof Error) {
-        alert(error.message || "Ocorreu um erro desconhecido");
+        toast.error(error.message || "Ocorreu um erro desconhecido");
       } else {
-        alert("Ocorreu um erro desconhecido");
+        toast.error("Ocorreu um erro desconhecido");
       }
     } finally {
       setIsSubmitting(false);
@@ -299,9 +319,7 @@ export default function CadastrarEquipe() {
                         <div className="mt-2">
                           <span className="inline-block bg-gray-100 rounded-full px-3 py-1 text-xs font-semibold text-gray-700 mr-2">
                             Modalidades:{" "}
-                            {Array.isArray(comp.modalidades_disponiveis)
-                              ? comp.modalidades_disponiveis.join(" ,  ")
-                              : comp.modalidades_disponiveis?.replace(/[\[\]"]/g, "") || "Não informado"}
+                            {comp.parsedModalidades?.join(" , ") || "Não informado"}
                           </span>
                         </div>
                       </div>
@@ -341,20 +359,11 @@ export default function CadastrarEquipe() {
                 required
               >
                 <option value="">Selecione...</option>
-                {Array.isArray(competicao?.modalidades_disponiveis)
-                  ? competicao.modalidades_disponiveis.map((mod) => (
-                      <option key={mod} value={mod}>
-                        {mod}
-                      </option>
-                    ))
-                  : competicao?.modalidades_disponiveis
-                      ?.replace(/[\[\]"]/g, "")
-                      .split(",")
-                      .map((mod) => (
-                        <option key={mod.trim()} value={mod.trim()}>
-                          {mod.trim()}
-                        </option>
-                      ))}
+                {competicao?.parsedModalidades?.map((mod) => (
+                  <option key={mod} value={mod}>
+                    {mod}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="mb-4">

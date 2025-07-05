@@ -28,13 +28,17 @@ export default async function NovaCompeticaoPage() {
     const periodoInscricaoFim = formData.get('periodoInscricaoFim') as string;
     const periodoCompeticaoInicio = formData.get('periodoCompeticaoInicio') as string;
     const periodoCompeticaoFim = formData.get('periodoCompeticaoFim') as string;
-    const modalidades = formData.getAll('modalidades') as string[];
+    
+    // Obtenha as modalidades do FormData
+    const modalidadesRaw = formData.getAll('modalidades') as string[];
+    // Garanta que as modalidades sejam únicas antes de salvar
+    const modalidadesUnicas = Array.from(new Set(modalidadesRaw));
 
-    if (modalidades.length === 0) {
+    if (modalidadesUnicas.length === 0) {
       throw new Error("Selecione pelo menos uma modalidade");
     }
 
-    const modalidadesJson = JSON.stringify(modalidades);
+    const modalidadesJson = JSON.stringify(modalidadesUnicas); // Converte o array único para JSON string
 
     const { error } = await (await supabase)
       .from('competicoes')
@@ -45,7 +49,7 @@ export default async function NovaCompeticaoPage() {
         periodo_inscricao_fim: periodoInscricaoFim,
         periodo_competicao_inicio: periodoCompeticaoInicio,
         periodo_competicao_fim: periodoCompeticaoFim,
-        modalidades_disponiveis: modalidadesJson,
+        modalidades_disponiveis: modalidadesJson, // Salva como JSON string
         criado_por: user.id
       }]);
 
