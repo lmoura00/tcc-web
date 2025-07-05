@@ -1,44 +1,61 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
-import { handleSubmit } from "./action"
+"use server";
 
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { handleSubmit } from "./action";
+import { CompetitionModalitiesForm } from "@/app/(protect)/dashboard/components/CompetitionModalitiesForm";
 
 export default async function EditarCompeticaoPage(props: any) {
   const { params } = props;
   const { id } = params;
-  const supabase = createClient()
-  const { data: { user } } = await (await supabase).auth.getUser()
-  
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
-    redirect("/login")
+    redirect("/login");
   }
 
-  const { data: competicao } = await (await supabase)
-    .from('competicoes')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data: competicao, error: fetchError } = await supabase
+    .from("competicoes")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) {
+    console.error("Erro ao buscar competição:", fetchError);
+    return notFound();
+  }
 
   if (!competicao) {
-    return notFound()
+    return notFound();
   }
 
-  const { data: modalidades } = await (await supabase)
-    .from('modalidades')
-    .select('id, nome')
-    .order('nome', { ascending: true })
-
-  const { data: modalidadesSelecionadas } = await (await supabase)
-    .from('competicoes_modalidades')
-    .select('modalidade_id')
-    .eq('competicao_id', id)
-
-  const modalidadesSelecionadasIds = modalidadesSelecionadas?.map(m => m.modalidade_id) || []
+  // Parse the JSON string from modalidades_disponiveis back into an array
+  let initialSelectedModalities: string[] = [];
+  if (competicao.modalidades_disponiveis) {
+    try {
+      initialSelectedModalities = JSON.parse(competicao.modalidades_disponiveis);
+      // Ensure it's an array of strings, even if JSON.parse returns something else
+      if (!Array.isArray(initialSelectedModalities) || !initialSelectedModalities.every(item => typeof item === 'string')) {
+        console.warn("Parsed modalities_disponiveis is not an array of strings. Resetting to empty array.");
+        initialSelectedModalities = [];
+      }
+    } catch (parseError) {
+      console.error("Erro ao parsear modalidades_disponiveis:", parseError);
+      initialSelectedModalities = []; // Fallback to empty array on parse error
+    }
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h1 className="text-2xl font-semibold text-gray-700 mb-6">Editar Competição</h1>
+      <h1 className="text-2xl font-semibold text-gray-700 mb-6">
+        Editar Competição
+      </h1>
       <form action={handleSubmit} className="max-w-lg space-y-4">
         <input type="hidden" name="competicaoId" value={id} />
         <div>
@@ -105,28 +122,12 @@ export default async function EditarCompeticaoPage(props: any) {
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Modalidades*
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {modalidades?.map((modalidade) => (
-              <div key={modalidade.id} className="flex items-center">
-                <input
-                  type="checkbox"
-                  id={`modalidade-${modalidade.id}`}
-                  name="modalidades"
-                  value={modalidade.id}
-                  defaultChecked={modalidadesSelecionadasIds.includes(modalidade.id)}
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                />
-                <label htmlFor={`modalidade-${modalidade.id}`} className="ml-2 block text-sm text-gray-700">
-                  {modalidade.nome}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
+
+
+        <CompetitionModalitiesForm
+          initialModalidades={initialSelectedModalities}
+        />
+
         <div className="flex space-x-3 pt-2">
           <button
             type="submit"
@@ -143,5 +144,5 @@ export default async function EditarCompeticaoPage(props: any) {
         </div>
       </form>
     </div>
-  )
+  );
 }

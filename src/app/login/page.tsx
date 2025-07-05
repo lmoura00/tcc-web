@@ -1,10 +1,9 @@
 "use client";
-import { useFormState } from "react-dom";
 import { login, LoginState } from "./action"; 
 import Image from "next/image";
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
-import { useEffect, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 
 
@@ -18,7 +17,7 @@ type Partida = {
 };
 
 const LoginPage = () => {
-  const [state, formAction] = useFormState<LoginState, FormData>(login, {});
+  const [state, formAction] = useActionState<LoginState, FormData>(login, {});
   const [proximasPartidas, setProximasPartidas] = useState<Partida[]>([]);
 
   useEffect(() => {

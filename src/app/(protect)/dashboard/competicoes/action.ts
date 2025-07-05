@@ -1,20 +1,24 @@
-'use server';
+"use server";
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface ActionResult {
   error?: string;
   success?: string;
+  message?: string;
+  redirectTo?: string;
+  warnings?: string[]; 
 }
 
 interface MatchResult {
   homeScore: number;
   awayScore: number;
 }
+
 interface Team {
   id: string;
   nome: string;
@@ -22,15 +26,66 @@ interface Team {
   responsavel_nome: string;
   responsavel_email: string;
   responsavel_turma: string;
-  created_at: string; 
+  created_at: string;
   status: string;
   competicao_id: string;
 }
+
+
 
 export interface ShuffleState {
   success: boolean;
   message?: string;
   error?: string;
+}
+
+export async function handleSubmit(formData: FormData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const competicaoId = formData.get("competicaoId") as string;
+  const nome = formData.get("nome") as string;
+  const periodoInscricaoInicio = formData.get("periodoInscricaoInicio") as string;
+  const periodoInscricaoFim = formData.get("periodoInscricaoFim") as string;
+  const periodoCompeticaoInicio = formData.get("periodoCompeticaoInicio") as string;
+  const periodoCompeticaoFim = formData.get("periodoCompeticaoFim") as string;
+
+  const modalidadesRaw = formData.getAll("modalidades") as string[];
+  const modalidadesUnicas = Array.from(new Set(modalidadesRaw));
+
+  try {
+    const modalidadesJson = JSON.stringify(modalidadesUnicas);
+
+    const { error: updateError } = await supabase
+      .from("competicoes")
+      .update({
+        nome,
+        periodo_inscricao_inicio: periodoInscricaoInicio,
+        periodo_inscricao_fim: periodoInscricaoFim,
+        periodo_competicao_inicio: periodoCompeticaoInicio,
+        periodo_competicao_fim: periodoCompeticaoFim,
+        modalidades_disponiveis: modalidadesJson,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id", competicaoId);
+
+    if (updateError) {
+      console.error("Erro ao atualizar competição:", updateError);
+      throw new Error(`Failed to update competition: ${updateError.message}`);
+    }
+
+    redirect(`/dashboard/competicoes/${competicaoId}`);
+  } catch (error) {
+    console.error("Erro durante a atualização:", error);
+    throw error;
+  }
 }
 
 export async function deleteCompetition(competitionId: string) {
@@ -43,12 +98,14 @@ export async function deleteCompetition(competitionId: string) {
   redirect("/dashboard/competicoes");
 }
 
-export async function shuffleMatches(competitionId: string): Promise<ActionResult | void> {
-  const supabase = createClient();
-  let error = null;
-  let teams = [];
+export async function shuffleMatches(
+  competitionId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const warnings: string[] = []; 
+
   try {
-    const { data: competition } = await (await supabase)
+    const { data: competition } = await supabase
       .from("competicoes")
       .select("*")
       .eq("id", competitionId)
@@ -58,7 +115,15 @@ export async function shuffleMatches(competitionId: string): Promise<ActionResul
       return { error: "Competição não encontrada" };
     }
 
-    const { data: existingMatches } = await (await supabase)
+    const hoje = new Date();
+    const fimCompeticao = new Date(competition.periodo_competicao_fim);
+    fimCompeticao.setUTCHours(23, 59, 59, 999);
+
+    if (hoje > fimCompeticao) {
+      return { error: "Não é possível sortear partidas para uma competição já finalizada." };
+    }
+
+    const { data: existingMatches } = await supabase
       .from("partidas")
       .select("*")
       .eq("competicao_id", competitionId);
@@ -67,83 +132,141 @@ export async function shuffleMatches(competitionId: string): Promise<ActionResul
       return { error: "Já existem partidas cadastradas para esta competição." };
     }
 
-    const teamsResult = await (await supabase)
+    const { data: allTeams } = await supabase
       .from("equipes")
       .select("*")
       .eq("competicao_id", competitionId);
 
-    teams = teamsResult.data ?? [];
+    const teams = allTeams ?? [];
 
     if (!teams || teams.length < 2) {
-      return { error: "É necessário pelo menos 2 equipes para sortear as partidas" };
+      return {
+        error: "É necessário pelo menos 2 equipes para sortear as partidas",
+      };
     }
 
     const startDate = new Date(competition.periodo_competicao_inicio);
     const endDate = new Date(competition.periodo_competicao_fim);
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (totalDays <= 0) {
+    const totalCompetitionDays = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1;
+
+    if (totalCompetitionDays <= 0) {
       return { error: "Período da competição inválido" };
     }
-    const matchesPerDay = Math.max(1, Math.floor(teams.length / 2));
 
-    const matches = [];
-    const currentDate = new Date(startDate);
+    const matchesToInsert: any[] = [];
+    const teamsByModality: Record<string, Team[]> = teams.reduce((acc, team) => {
+      const modality = team.modalidade || "Sem modalidade";
+      if (!acc[modality]) {
+        acc[modality] = [];
+      }
+      acc[modality].push(team);
+      return acc;
+    }, {});
 
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        matches.push({
-          competicao_id: competitionId,
-          equipe_a_id: teams[i].id,
-          equipe_b_id: teams[j].id,
-          data: null,
-          local: null,
-          criado_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
-        });
+    const currentMatchDate = new Date(startDate);
+    currentMatchDate.setUTCHours(10, 0, 0, 0);
 
-        if (matches.length % matchesPerDay === 0) {
-          currentDate.setDate(currentDate.getDate() + 1);
+    for (const modality in teamsByModality) {
+      const modalityTeams = teamsByModality[modality];
+
+      if (modalityTeams.length < 2) {
+       
+        warnings.push(`Modalidade '${modality}' tem menos de 2 equipes e foi ignorada na geração de partidas.`);
+        continue;
+      }
+
+      for (let i = 0; i < modalityTeams.length; i++) {
+        for (let j = i + 1; j < modalityTeams.length; j++) {
+          if (currentMatchDate > endDate) {
+           
+            return {
+              error: "Não há dias suficientes no período da competição para todas as partidas.",
+              warnings: warnings.length > 0 ? warnings : undefined,
+            };
+          }
+
+          matchesToInsert.push({
+            competicao_id: competitionId,
+            equipe_a_id: modalityTeams[i].id,
+            equipe_b_id: modalityTeams[j].id,
+            data: currentMatchDate.toISOString(),
+            local: "A definir",
+            modalidade: modality,
+            criado_em: new Date().toISOString(),
+            atualizado_em: new Date().toISOString(),
+          });
+
+          if (matchesToInsert.length % 2 === 0) {
+            currentMatchDate.setDate(currentMatchDate.getDate() + 1);
+            currentMatchDate.setUTCHours(10, 0, 0, 0);
+          }
         }
       }
     }
 
-    console.log("matches gerados:", matches);
+    if (matchesToInsert.length === 0 && warnings.length === 0) {
+      
+      return { error: "Não foi possível gerar partidas. Verifique se há equipes suficientes e aprovadas em pelo menos uma modalidade." };
+    } else if (matchesToInsert.length === 0 && warnings.length > 0) {
+      
+      return {
+        error: "Nenhuma partida foi gerada. Verifique os avisos para mais detalhes.",
+        warnings: warnings,
+      };
+    }
 
-    const insertResult = await (await supabase)
+
+    const insertResult = await supabase
       .from("partidas")
-      .insert(matches);
+      .insert(matchesToInsert);
 
-    error = insertResult.error;
-
-    if (error) {
-      console.error("Erro Supabase:", error);
-      return { error: error.message || "Erro ao salvar as partidas no banco de dados" };
+    if (insertResult.error) {
+      console.error("Erro Supabase:", insertResult.error);
+      return {
+        error: insertResult.error.message || "Erro ao salvar as partidas no banco de dados",
+        warnings: warnings.length > 0 ? warnings : undefined,
+      };
     }
 
     await notifyTeamsAboutMatches(competitionId, teams);
 
-  } catch (err) {
-    console.error("Erro ao sortear partidas:", err);
-    return { error: "Ocorreu um erro ao sortear as partidas" };
-  }
+    
+    return {
+      success: "Partidas sorteadas com sucesso!",
+      redirectTo: `/dashboard/competicoes/${competitionId}/partidas`,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
 
-  
-  redirect(`/dashboard/competicoes/${competitionId}/partidas`);
+  } catch (err) {
+    if (err && typeof err === 'object' && 'message' in err && (err as Error).message === 'NEXT_REDIRECT') {
+      throw err;
+    }
+    console.error("Erro ao sortear partidas:", err);
+    
+    return {
+      error: "Ocorreu um erro ao sortear as partidas",
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
 }
 
 export async function updateMatchResult(matchId: string, result: MatchResult) {
   const supabase = createClient();
-  
+
   const { data: match, error: matchError } = await (await supabase)
     .from("partidas")
     .update({
       placar_casa: result.homeScore,
       placar_fora: result.awayScore,
       status: "concluida",
-      atualizado_em: new Date().toISOString()
+      atualizado_em: new Date().toISOString(),
     })
     .eq("id", matchId)
-    .select("*, equipe_a:equipes!equipe_a_id(*), equipe_b:equipes!equipe_b_id(*)")
+    .select(
+      "*, equipe_a:equipes!equipe_a_id(nome, responsavel_email, responsavel_nome), equipe_b:equipes!equipe_b_id(nome, responsavel_email, responsavel_nome)"
+    )
     .single();
 
   if (matchError) throw matchError;
@@ -154,14 +277,17 @@ export async function updateMatchResult(matchId: string, result: MatchResult) {
 
 async function updateStandings(competitionId: string) {
   const supabase = createClient();
-  
+
   const { error } = await (await supabase)
     .from("partidas")
     .select("*")
     .eq("competicao_id", competitionId)
     .eq("status", "concluida");
+
   if (!error) {
-    console.log("Classificação atualizada com sucesso");
+    console.log("Classificação atualizada com sucesso (lógica de atualização pode precisar ser implementada)");
+  } else {
+    console.error("Erro ao tentar simular atualização de classificação:", error);
   }
 }
 
@@ -176,12 +302,12 @@ async function notifyTeamsAboutMatches(competitionId: string, teams: Team[]) {
 
     for (const team of teams) {
       await resend.emails.send({
-        from: 'no-reply@seusistema.com',
+        from: "no-reply@seusistema.com",
         to: team.responsavel_email,
         subject: `Partidas da competição ${competition?.nome} foram sorteadas`,
         html: `<p>Olá ${team.responsavel_nome},</p>
-              <p>As partidas da competição ${competition?.nome} foram agendadas.</p>
-              <p>Acesse o sistema para ver os detalhes.</p>`
+               <p>As partidas da competição ${competition?.nome} foram agendadas.</p>
+               <p>Acesse o sistema para ver os detalhes.</p>`,
       });
     }
   } catch (error) {
@@ -190,11 +316,11 @@ async function notifyTeamsAboutMatches(competitionId: string, teams: Team[]) {
 }
 
 export async function updateTeamStatus(
-  teamId: string, 
-  status: 'aprovado' | 'reprovado' | 'pendente'
+  teamId: string,
+  status: "aprovado" | "reprovado" | "pendente"
 ) {
   const supabase = createClient();
-  
+
   const { data: team } = await (await supabase)
     .from("equipes")
     .select("*")
@@ -215,20 +341,20 @@ export async function updateTeamStatus(
     const messages = {
       aprovado: {
         subject: "✅ Sua equipe foi aprovada!",
-        text: "Sua equipe foi aprovada para participar da competição."
+        text: "Sua equipe foi aprovada para participar da competição.",
       },
       reprovado: {
         subject: "❌ Status da equipe alterado",
-        text: "Sua equipe foi reprovada na competição."
+        text: "Sua equipe foi reprovada na competição.",
       },
       pendente: {
         subject: "🔄 Status da equipe alterado",
-        text: "Sua equipe está com status pendente."
-      }
+        text: "Sua equipe está com status pendente.",
+      },
     };
 
     await resend.emails.send({
-      from: 'notificacoes@seusistema.com',
+      from: "notificacoes@seusistema.com",
       to: team.responsavel_email,
       subject: messages[status].subject,
       html: `
@@ -236,11 +362,72 @@ export async function updateTeamStatus(
         <p>${messages[status].text}</p>
         <p><strong>Equipe:</strong> ${team.nome}</p>
         <p><strong>Status:</strong> ${status}</p>
-      `
+      `,
     });
   } catch (emailError) {
     console.error("Erro ao enviar e-mail:", emailError);
   }
 
   return data;
+}
+
+export async function updateMatchResultFromForm(formData: FormData) {
+  const supabase = createClient();
+  const id = formData.get("id") as string;
+  const homeScore = formData.get("homeScore");
+  const awayScore = formData.get("awayScore");
+
+  if (id && homeScore !== null && awayScore !== null) {
+    const { data: match, error: updateError } = await (await supabase)
+      .from("partidas")
+      .update({
+        placar_casa: Number(homeScore),
+        placar_fora: Number(awayScore),
+        status: "concluida",
+        atualizado_em: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select("competicao_id")
+      .single();
+
+    if (updateError) {
+      console.error("Erro ao atualizar resultado da partida:", updateError);
+      return { error: "Erro ao atualizar resultado." };
+    }
+
+    if (match) {
+      await updateStandings(match.competicao_id);
+    }
+    return { success: "Resultado atualizado." };
+  }
+  return { error: "Dados inválidos." };
+}
+
+export async function deleteMatch(formData: FormData) {
+  const supabase = createClient();
+  const matchId = formData.get("id") as string;
+  if (matchId) {
+    await (await supabase)
+      .from("partidas")
+      .delete()
+      .eq("id", matchId);
+  }
+}
+
+export async function updateMatchDateAndLocal(formData: FormData) {
+  const supabase = createClient();
+  const id = formData.get("id") as string;
+  const data = formData.get("data");
+  const local = formData.get("local");
+
+  if (id) {
+    await (await supabase)
+      .from("partidas")
+      .update({
+        data: data ? new Date(data as string).toISOString() : null,
+        local: local || null,
+        atualizado_em: new Date().toISOString()
+      })
+      .eq("id", id);
+  }
 }
