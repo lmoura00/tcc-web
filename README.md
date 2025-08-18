@@ -109,5 +109,3 @@ tcc-web/
 └── ...
 ```
 
----
-*Este README foi gerado com base na análise do código-fonte do projeto.*
