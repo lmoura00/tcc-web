@@ -6,6 +6,7 @@ import SignOutButton from "./SignOutButton";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import {Profile as user} from "@/types"
 
 interface DashboardLayoutProps {
@@ -16,6 +17,7 @@ interface DashboardLayoutProps {
 interface Profile {
   first_name: string;
   last_name: string;
+  photo_url?: string;
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -31,7 +33,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       if (user?.id) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('first_name, last_name')
+          .select('first_name, last_name, photo_url')
           .eq('id', user.id)
           .single();
         if (!error && data) setProfile(data);
@@ -60,8 +62,20 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       >
         <div className={`py-6 px-4 border-b border-white/10 ${!isHovered ? 'flex justify-center' : ''}`}>
           <div className="flex items-center space-x-3">
-            <div className="bg-white/20 p-2 rounded-full flex-shrink-0">
-              <FiUser className="text-white text-xl" />
+            <div className="bg-white/20 p-2 rounded-full flex-shrink-0 w-12 h-12 flex items-center justify-center overflow-hidden">
+              {isLoadingProfile ? (
+                <div className="animate-pulse bg-gray-300 w-full h-full rounded-full" />
+              ) : profile?.photo_url ? (
+                <Image
+                  src={profile.photo_url}
+                  alt="Foto de perfil"
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <FiUser className="text-white text-xl" />
+              )}
             </div>
             {isHovered && (
               <div className="overflow-hidden">
