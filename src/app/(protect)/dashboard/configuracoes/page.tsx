@@ -32,7 +32,7 @@ export default async function ConfiguracoesPage() {
         const imgbbFormData = new FormData();
         imgbbFormData.append("image", photoFile);
         const imgbbResponse = await fetch(
-          "https://api.imgbb.com/1/upload?key=SUA_CHAVE_API",
+          `https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`,
           { method: "POST", body: imgbbFormData }
         );
         const imgbbData = await imgbbResponse.json();
@@ -83,6 +83,8 @@ export default async function ConfiguracoesPage() {
                     <Image
                       src={profile.photo_url}
                       alt="Foto de perfil"
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
                   </div>
