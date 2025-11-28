@@ -1,4 +1,4 @@
-// --- DetalhesCompeticaoPage.tsx ---
+
 "use server";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
