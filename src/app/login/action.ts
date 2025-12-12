@@ -36,7 +36,7 @@ export async function login(prevState: LoginState, formData: FormData): Promise<
     return { error: errorMessage };
   }
 
-  // Sempre retorna um objeto, mesmo após o redirect
+
   redirect("/dashboard");
-  return {}; // <- Adicione esta linha para garantir o tipo
+  return {}; 
 }
