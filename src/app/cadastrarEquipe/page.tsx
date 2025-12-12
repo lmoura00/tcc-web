@@ -54,6 +54,7 @@ export default function CadastrarEquipe() {
   const [jogadores, setJogadores] = useState<Jogador[]>([
     { nome: "", matricula: "", turma: "", selected: true },
   ]);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     const progressValues: Record<number, string> = {
@@ -166,18 +167,60 @@ export default function CadastrarEquipe() {
     carregarCompeticoes();
   }, []);
 
+  const validateEmail = (emailValue: string) => {
+    const regex = /^[^\s@]+@acad\.ifma\.edu\.br$/;
+    if (!regex.test(emailValue)) {
+      setEmailError("O email deve terminar com @acad.ifma.edu.br");
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value) {
+      validateEmail(value);
+    } else {
+      setEmailError(null);
+    }
+  };
+
   const nextStep = () => {
-    if (
-      step === 1 &&
-      (!modalidade || !nomeCompleto || !email || !turma || !nomeEquipe)
-    ) {
-      toast.error("Preencha todos os campos obrigatórios!");
-      return;
+    if (step === 1) {
+      if (!validateEmail(email)) {
+        toast.error("Email inválido! Use @acad.ifma.edu.br");
+        return;
+      }
+      if (
+        !modalidade ||
+        !nomeCompleto ||
+        !email ||
+        !turma ||
+        !nomeEquipe
+      ) {
+        toast.error("Preencha todos os campos obrigatórios!");
+        return;
+      }
     }
 
-    if (step === 2 && jogadores.filter((j) => j.selected).length === 0) {
-      toast.error("Adicione pelo menos um jogador para continuar!");
-      return;
+    if (step === 2) {
+      const jogadoresSelecionados = jogadores.filter((j) => j.selected);
+      
+      if (jogadoresSelecionados.length === 0) {
+        toast.error("Adicione pelo menos um jogador para continuar!");
+        return;
+      }
+
+      const jogadorInvalido = jogadoresSelecionados.find(
+        (j) => !j.nome.trim() || !j.matricula.trim() || !j.turma.trim()
+      );
+
+      if (jogadorInvalido) {
+        toast.error("Preencha todos os dados de cada jogador selecionado!");
+        return;
+      }
     }
 
     setStep(step + 1);
@@ -194,6 +237,26 @@ export default function CadastrarEquipe() {
     nextStep();
   };
 
+  const validateEquipeUnica = async () => {
+    try {
+      const { data: equipeExistente } = await supabase
+        .from("equipes")
+        .select("id")
+        .eq("responsavel_email", email)
+        .eq("modalidade", modalidade)
+        .eq("competicao_id", competicao?.id)
+        .single();
+
+      if (equipeExistente) {
+        toast.error("Você já cadastrou uma equipe nessa modalidade nesta competição!");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      return true;
+    }
+  };
+
   const handleFinalizarInscricao = async () => {
     setIsSubmitting(true);
 
@@ -208,6 +271,12 @@ export default function CadastrarEquipe() {
 
       if (jogadores.filter((j) => j.selected).length === 0) {
         throw new Error("Adicione pelo menos um jogador para continuar!");
+      }
+
+      const equipeValida = await validateEquipeUnica();
+      if (!equipeValida) {
+        setIsSubmitting(false);
+        return;
       }
 
       const { data: equipe, error: equipeError } = await supabase
@@ -390,12 +459,17 @@ export default function CadastrarEquipe() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="seu@email.com"
+                  onChange={handleEmailChange}
+                  className={`w-full pl-10 p-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    emailError ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="seu@acad.ifma.edu.br"
                   required
                 />
               </div>
+              {emailError && (
+                <p className="text-red-500 text-sm mt-1">{emailError}</p>
+              )}
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -582,7 +656,12 @@ export default function CadastrarEquipe() {
               <button
                 onClick={nextStep}
                 className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-                disabled={jogadores.filter((j) => j.selected).length === 0}
+                disabled={
+                  jogadores.filter((j) => j.selected).length === 0 ||
+                  jogadores
+                    .filter((j) => j.selected)
+                    .some((j) => !j.nome.trim() || !j.matricula.trim() || !j.turma.trim())
+                }
               >
                 Próxima etapa <FiArrowRight className="ml-2" />
               </button>
